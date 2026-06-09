@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Lahori Marble palette */
+  --color-page-bg:    #141618;
+  --color-surface:    #23282D;
+  --color-elevated:   #3D494F;
+  --color-teal:       #1D9E75;
+  --color-ivory:      #EDE9DF;
+  --color-warm-stone: #C8B89A;
+
+  /* Light mode */
+  --color-light-bg:      #F5F2ED;
+  --color-light-surface: #EDEAE4;
+  --color-light-border:  #D5CFC6;
+  --color-light-text:    #1A1E21;
+  --color-light-muted:   #6B6560;
+
+  --font-heading: 'Libre Baskerville', Georgia, serif;
+  --font-body:    'Outfit', sans-serif;
+}
+
+/* ───────────────────────────────
+   BASE — Dark Mode (default, Lahori Marble)
+──────────────────────────────── */
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #141618;
+  color: #EDE9DF;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 400;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ───────────────────────────────
+   LIGHT MODE OVERRIDE
+──────────────────────────────── */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  background-color: #F5F2ED;
+  color: #1A1E21;
+}
+
+/* ───────────────────────────────
+   TYPOGRAPHY
+──────────────────────────────── */
+
+h1, h2, h3, h4, h5, h6,
+.font-serif,
+.navbar-logo-text {
+  font-family: 'Libre Baskerville', Georgia, serif !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+}
+
+body, p, span, li, a, button, input, label, select, textarea,
+.font-sans, .nav-link {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+}
+
+button, .btn {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 500 !important;
+}
+
+header a span.font-serif, footer span.font-serif {
+  font-family: 'Libre Baskerville', Georgia, serif !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+}
+
+/* ───────────────────────────────
+   SCROLLBARS
+──────────────────────────────── */
+::-webkit-scrollbar { width: 8px; }
+
+::-webkit-scrollbar-track { background: #141618; }
+html:not(.dark) ::-webkit-scrollbar-track { background: #F5F2ED; }
+
+::-webkit-scrollbar-thumb {
+  background: #3D494F;
+  border-radius: 4px;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb { background: #C8B89A; }
+
+::-webkit-scrollbar-thumb:hover { background: #1D9E75; }
+
+/* ───────────────────────────────
+   UTILITIES
+──────────────────────────────── */
+.transition-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+/* ───────────────────────────────
+   ENTRANCE ANIMATIONS
+──────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
