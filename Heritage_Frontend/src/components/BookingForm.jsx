@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Users, Shield, CreditCard, ChevronRight, CheckCircle, FileText } from 'lucide-react';
+import { addEarnedStamp, getStampMotif } from '../utils/passport.js';
 
 export default function BookingForm({ site }) {
   const navigate = useNavigate();
@@ -16,6 +17,23 @@ export default function BookingForm({ site }) {
   const [specialReq, setSpecialReq] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('JazzCash');
   const [bookingRef] = useState(`HA-2026-${Math.floor(100000 + Math.random() * 900000)}`);
+
+  // Passport Stamp Earning states
+  const [showStampAnim, setShowStampAnim] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  // Earn stamp on successful registration
+  useEffect(() => {
+    if (step === 3 && site) {
+      addEarnedStamp(site);
+      setShowStampAnim(true);
+      setToastMessage(`🏛️ New stamp unlocked — ${site.name}`);
+      const t1 = setTimeout(() => {
+        setToastMessage('');
+      }, 4500);
+      return () => clearTimeout(t1);
+    }
+  }, [step, site]);
 
   // Calculations
   const baseTicket = site?.unescoListed ? 800 : 500;
@@ -312,10 +330,30 @@ export default function BookingForm({ site }) {
         </div>
       ) : (
         /* STEP 3: Success Confirmation Page */
-        <div className="max-w-xl mx-auto w-full bg-[#FAF6F0] dark:bg-[#1C1C1C] p-8 border border-[#A0522D]/10 dark:border-[#FAF6F0]/10 rounded-2xl shadow-lg flex flex-col items-center text-center space-y-6">
+        <div className="max-w-xl mx-auto w-full bg-[#FAF6F0] dark:bg-[#1C1C1C] p-8 border border-[#A0522D]/10 dark:border-[#FAF6F0]/10 rounded-2xl shadow-lg flex flex-col items-center text-center space-y-6 relative overflow-hidden">
           <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
             <CheckCircle className="w-10 h-10" />
           </div>
+
+          {/* Stamp Unlock Animation */}
+          {showStampAnim && (
+            <div className="relative w-full py-4 flex flex-col items-center justify-center overflow-hidden">
+              {/* Radial glow burst element */}
+              <div className="absolute w-32 h-32 rounded-full bg-[#1D9E75]/20 animate-glow-burst pointer-events-none" />
+              {/* Stamp Circle Container (drops and spring rotates) */}
+              <div className="w-[100px] h-[100px] rounded-full bg-gradient-to-br from-[#1a3a30] to-[#0f2420] border-[2.5px] border-[#1D9E75] flex items-center justify-center text-5xl shadow-[0_0_24px_rgba(29,158,117,0.3)] z-10 animate-stamp-drop">
+                {getStampMotif(site.civilizationEra, site.siteType).emoji}
+              </div>
+              <div className="text-center mt-3.5 z-10">
+                <span className="text-[10px] font-sans font-semibold text-[#1D9E75] uppercase tracking-[0.1em]">
+                  Stamp Earned
+                </span>
+                <h4 className="font-serif font-bold text-sm text-[#2D1B00] dark:text-[#FAF6F0] leading-none mt-1">
+                  {site.name}
+                </h4>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <h2 className="text-2xl font-serif font-bold text-[#A0522D] dark:text-[#D4A843]">
@@ -364,6 +402,17 @@ export default function BookingForm({ site }) {
           >
             Return to Home Portal
           </button>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 bg-[#23282D] border-[0.5px] border-[#1D9E75] rounded-xl px-5 py-3.5 shadow-2xl flex items-center gap-3 z-50 text-left animate-quiz-slide text-xs text-[#EDE9DF]">
+          <span className="text-base">🏛️</span>
+          <div>
+            <span className="text-[#1D9E75] font-semibold tracking-wide block uppercase text-[9px] mb-0.5">NEW STAMP UNLOCKED</span>
+            <span className="font-sans font-medium">{site.name}</span>
+          </div>
         </div>
       )}
 

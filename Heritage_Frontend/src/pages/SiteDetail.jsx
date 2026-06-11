@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Star, Crown, MapPin, Landmark, Calendar, Users, Calculator, MessageSquare, Compass, ShieldCheck } from 'lucide-react';
 import SiteCard from '../components/SiteCard';
 import { siteData } from '../data/siteData';
+import HeritageChatbot from '../components/HeritageChatbot';
+
 
 export default function SiteDetail() {
   const { id } = useParams();
@@ -17,6 +19,297 @@ export default function SiteDetail() {
   // Booking widget states
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [groupSize, setGroupSize] = useState(1);
+
+  // Map state & references
+  const [mapError, setMapError] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapRef = useRef(null);
+  const googleMapInstance = useRef(null);
+
+  // Haversine distance calculator helper
+  const getHaversineDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth radius in km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Google Maps JS API script dynamic loader
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey || apiKey === 'your_google_maps_api_key_here') {
+      setMapError(true);
+      return;
+    }
+
+    const scriptId = 'google-maps-api-script';
+    let script = document.getElementById(scriptId);
+
+    const initMap = () => {
+      setMapLoaded(true);
+    };
+
+    if (window.google && window.google.maps) {
+      initMap();
+    } else {
+      if (!script) {
+        script = document.createElement('script');
+        script.id = scriptId;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=__initGoogleMap`;
+        script.async = true;
+        script.defer = true;
+        
+        window.__initGoogleMap = () => {
+          initMap();
+          delete window.__initGoogleMap;
+        };
+
+        script.onerror = () => {
+          setMapError(true);
+        };
+
+        document.head.appendChild(script);
+      } else {
+        const interval = setInterval(() => {
+          if (window.google && window.google.maps) {
+            initMap();
+            clearInterval(interval);
+          }
+        }, 100);
+        return () => clearInterval(interval);
+      }
+    }
+  }, []);
+
+  // Map Instance and Markers lifecycle hook
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current || !window.google || !window.google.maps) return;
+
+    const mapOptions = {
+      center: { lat: Number(site.lat), lng: Number(site.lon) },
+      zoom: 14,
+      mapTypeId: 'roadmap',
+      styles: [
+        { elementType: "geometry", stylers: [{ color: "#1a1f23" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#141618" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#C8B89A" }] },
+        {
+          featureType: "road",
+          elementType: "geometry",
+          stylers: [{ color: "#23282D" }]
+        },
+        {
+          featureType: "road",
+          elementType: "geometry.stroke",
+          stylers: [{ color: "#3D494F" }]
+        },
+        {
+          featureType: "road",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#EDE9DF" }]
+        },
+        {
+          featureType: "water",
+          elementType: "geometry",
+          stylers: [{ color: "#0f1a1c" }]
+        },
+        {
+          featureType: "water",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#1D9E75" }]
+        },
+        {
+          featureType: "poi",
+          elementType: "geometry",
+          stylers: [{ color: "#1e2428" }]
+        },
+        {
+          featureType: "poi.park",
+          elementType: "geometry",
+          stylers: [{ color: "#1a2e20" }]
+        },
+        {
+          featureType: "transit",
+          elementType: "geometry",
+          stylers: [{ color: "#23282D" }]
+        },
+        {
+          featureType: "administrative",
+          elementType: "geometry.stroke",
+          stylers: [{ color: "#3D494F" }]
+        },
+        {
+          featureType: "administrative.land_parcel",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#C8B89A" }]
+        }
+      ],
+      disableDefaultUI: true,
+      clickableIcons: false,
+      scrollwheel: true,
+      draggable: true
+    };
+
+    const map = new window.google.maps.Map(mapRef.current, mapOptions);
+    googleMapInstance.current = map;
+
+    // Custom Zoom Controls Style Injection
+    const zoomControlDiv = document.createElement('div');
+    zoomControlDiv.style.margin = '16px';
+    zoomControlDiv.style.display = 'flex';
+    zoomControlDiv.style.flexDirection = 'column';
+    zoomControlDiv.style.gap = '6px';
+
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.innerHTML = '+';
+    zoomInBtn.type = 'button';
+    zoomInBtn.style.width = '36px';
+    zoomInBtn.style.height = '36px';
+    zoomInBtn.style.backgroundColor = '#23282D';
+    zoomInBtn.style.color = '#EDE9DF';
+    zoomInBtn.style.border = '0.5px solid #3D494F';
+    zoomInBtn.style.borderRadius = '8px';
+    zoomInBtn.style.fontSize = '20px';
+    zoomInBtn.style.fontWeight = 'normal';
+    zoomInBtn.style.cursor = 'pointer';
+    zoomInBtn.style.display = 'flex';
+    zoomInBtn.style.alignItems = 'center';
+    zoomInBtn.style.justifyContent = 'center';
+    zoomInBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    zoomInBtn.style.outline = 'none';
+
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.innerHTML = '−';
+    zoomOutBtn.type = 'button';
+    zoomOutBtn.style.width = '36px';
+    zoomOutBtn.style.height = '36px';
+    zoomOutBtn.style.backgroundColor = '#23282D';
+    zoomOutBtn.style.color = '#EDE9DF';
+    zoomOutBtn.style.border = '0.5px solid #3D494F';
+    zoomOutBtn.style.borderRadius = '8px';
+    zoomOutBtn.style.fontSize = '20px';
+    zoomOutBtn.style.fontWeight = 'normal';
+    zoomOutBtn.style.cursor = 'pointer';
+    zoomOutBtn.style.display = 'flex';
+    zoomOutBtn.style.alignItems = 'center';
+    zoomOutBtn.style.justifyContent = 'center';
+    zoomOutBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    zoomOutBtn.style.outline = 'none';
+
+    zoomInBtn.addEventListener('click', () => map.setZoom(map.getZoom() + 1));
+    zoomOutBtn.addEventListener('click', () => map.setZoom(map.getZoom() - 1));
+
+    zoomControlDiv.appendChild(zoomInBtn);
+    zoomControlDiv.appendChild(zoomOutBtn);
+
+    map.controls[window.google.maps.ControlPosition.BOTTOM_RIGHT].push(zoomControlDiv);
+
+    // Primary Marker Creation (Teardrop shape + monument logo)
+    const primaryMarkerSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 30" width="36" height="44">
+        <path d="M12 2C6.5 2 2 6.5 2 12c0 6.5 10 16 10 16s10-9.5 10-16c0-5.5-4.5-10-10-10z" fill="#1D9E75" stroke="#FFFFFF" stroke-width="1.5"/>
+        <text x="12" y="15" font-size="10" fill="#FFFFFF" text-anchor="middle" font-family="sans-serif">🏛</text>
+      </svg>
+    `;
+
+    const primaryMarker = new window.google.maps.Marker({
+      position: { lat: Number(site.lat), lng: Number(site.lon) },
+      map: map,
+      title: site.name,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(primaryMarkerSvg),
+        scaledSize: new window.google.maps.Size(36, 44),
+        anchor: new window.google.maps.Point(18, 44)
+      }
+    });
+
+    const primaryInfoWindowHtml = `
+      <div style="padding: 8px; font-family: 'Outfit', sans-serif; background-color: #23282D; border: 0.5px solid #3D494F; border-radius: 8px; color: #EDE9DF; min-width: 180px;">
+        <h4 style="font-family: 'Libre Baskerville', Georgia, serif; font-weight: bold; font-size: 14px; margin: 0 0 6px 0; color: #EDE9DF;">${site.name}</h4>
+        <p style="font-size: 11px; margin: 0; color: #C8B89A;">${site.city}, ${site.province}</p>
+      </div>
+    `;
+
+    const primaryInfoWindow = new window.google.maps.InfoWindow({
+      content: primaryInfoWindowHtml
+    });
+
+    primaryMarker.addListener('click', () => {
+      primaryInfoWindow.open(map, primaryMarker);
+    });
+
+    // Query for nearby sites within 100km
+    const nearbySites = siteData
+      .filter(s => s.id !== site.id)
+      .map(s => {
+        const dist = getHaversineDistance(Number(site.lat), Number(site.lon), Number(s.lat), Number(s.lon));
+        return { ...s, distance: dist };
+      })
+      .filter(s => s.distance <= 100)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 5);
+
+    const markersList = [primaryMarker];
+    const infoWindowsList = [primaryInfoWindow];
+
+    nearbySites.forEach(s => {
+      const secondaryMarkerSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 30" width="26" height="32">
+          <path d="M12 2C6.5 2 2 6.5 2 12c0 6.5 10 16 10 16s10-9.5 10-16c0-5.5-4.5-10-10-10z" fill="#C8B89A" stroke="#FFFFFF" stroke-width="1.2"/>
+          <text x="12" y="14" font-size="8" fill="#FFFFFF" text-anchor="middle" font-family="sans-serif">🏛</text>
+        </svg>
+      `;
+
+      const secondaryMarker = new window.google.maps.Marker({
+        position: { lat: Number(s.lat), lng: Number(s.lon) },
+        map: map,
+        title: s.name,
+        icon: {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(secondaryMarkerSvg),
+          scaledSize: new window.google.maps.Size(26, 32),
+          anchor: new window.google.maps.Point(13, 32)
+        }
+      });
+
+      const secondaryInfoWindowHtml = `
+        <div style="padding: 8px; font-family: 'Outfit', sans-serif; background-color: #23282D; border: 0.5px solid #3D494F; border-radius: 8px; color: #EDE9DF; min-width: 160px;">
+          <h4 style="font-family: 'Libre Baskerville', Georgia, serif; font-weight: bold; font-size: 13px; margin: 0 0 4px 0; color: #EDE9DF;">${s.name}</h4>
+          <p style="font-size: 10px; margin: 0 0 6px 0; color: #C8B89A;">${s.city}, ${s.province} (${Math.round(s.distance)} km away)</p>
+          <a href="/site/${s.id}" style="font-size: 11px; font-weight: bold; color: #1D9E75; text-decoration: none; display: inline-block;">View Site →</a>
+        </div>
+      `;
+
+      const secondaryInfoWindow = new window.google.maps.InfoWindow({
+        content: secondaryInfoWindowHtml
+      });
+
+      secondaryMarker.addListener('click', () => {
+        secondaryInfoWindow.open(map, secondaryMarker);
+      });
+
+      markersList.push(secondaryMarker);
+      infoWindowsList.push(secondaryInfoWindow);
+    });
+
+    // Cleanup listeners and markers
+    return () => {
+      markersList.forEach(m => {
+        window.google.maps.event.clearInstanceListeners(m);
+        m.setMap(null);
+      });
+      infoWindowsList.forEach(iw => iw.close());
+      if (googleMapInstance.current) {
+        googleMapInstance.current = null;
+      }
+    };
+  }, [mapLoaded, site.id]);
 
   // Calculations
   const baseTicket = site.unescoListed ? 800 : 500;
@@ -97,6 +390,32 @@ export default function SiteDetail() {
             <Star className="w-4 h-4 text-[#D4A843] fill-[#D4A843]" />
             <span>{site.satisfactionRating} / 5.0 Visitor Rating</span>
           </span>
+        </div>
+      </div>
+
+      {/* 3.5 Map Section */}
+      <div className="space-y-3">
+        <span className="font-bold text-[#A0522D] dark:text-[#D4A843] uppercase tracking-wider text-[10px] block font-sans">
+          Location & Nearby Sites
+        </span>
+        
+        {mapError ? (
+          <div className="w-full h-[280px] md:h-[420px] rounded-2xl border-[0.5px] border-[#3D494F] bg-[#1a1f23] flex items-center justify-center text-[#C8B89A] font-sans text-xs">
+            <span>Map unavailable — add VITE_GOOGLE_MAPS_API_KEY to .env</span>
+          </div>
+        ) : (
+          <div 
+            ref={mapRef} 
+            className="w-full h-[280px] md:h-[420px] rounded-2xl overflow-hidden border-[0.5px] border-[#3D494F] bg-[#1a1f23]"
+          />
+        )}
+
+        <div className="flex flex-wrap items-center gap-2 text-xs font-sans text-[#C8B89A]">
+          <span>GPS Coordinates: {site.lat}, {site.lon}</span>
+          <span className="opacity-50">·</span>
+          <span>{site.city}</span>
+          <span className="opacity-50">·</span>
+          <span>{site.province}</span>
         </div>
       </div>
 
@@ -308,6 +627,9 @@ export default function SiteDetail() {
         </div>
 
       </section>
+
+      {/* AI Heritage Chatbot */}
+      <HeritageChatbot site={site} />
 
     </div>
   );

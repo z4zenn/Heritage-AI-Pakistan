@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Landmark, Heart } from 'lucide-react';
 
-const tp  = 'text-[#1A1E21] dark:text-[#EDE9DF]';
-const tm  = 'text-[#6B6560] dark:text-[#C8B89A]';
+const tp = 'text-[#1A1E21] dark:text-[#EDE9DF]';
+const tm = 'text-[#6B6560] dark:text-[#C8B89A]';
 const bdr = 'border-[#D5CFC6] dark:border-[#3D494F]';
 
 export default function Footer() {
@@ -49,8 +49,8 @@ export default function Footer() {
           <h4 className="font-serif font-bold text-sm uppercase tracking-wider text-[#1D9E75]">Contact</h4>
           <ul className={`flex flex-col gap-3 text-xs ${tm} font-sans`}>
             {[
-              [Mail,   'info@heritageai.pk'],
-              [Phone,  '+92 (40) 1234567'],
+              [Mail, '2022-cs-10133@uosahiwal.edu.pk'],
+              [Phone, '+92 315 4550618'],
               [MapPin, 'BSCS Dept, University of Sahiwal, Pakistan']
             ].map(([Icon, text]) => (
               <li key={text} className="flex items-center gap-2.5">
