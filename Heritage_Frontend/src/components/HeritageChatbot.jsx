@@ -238,10 +238,10 @@ export default function HeritageChatbot({ site }) {
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="text-2xl text-[#C8B89A] hover:text-[#EDE9DF] cursor-pointer bg-transparent border-none outline-none leading-none p-1 transition-colors"
-            aria-label="Minimize Chatbot"
+            className="text-[#C8B89A] hover:text-[#EDE9DF] cursor-pointer bg-transparent border-none outline-none p-1 transition-colors flex items-center justify-center"
+            aria-label="Close Chatbot"
           >
-            &minus;
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -336,7 +336,7 @@ export default function HeritageChatbot({ site }) {
       </div>
 
       {/* ── FLOATING CHAT BUTTON ── */}
-      <div className="fixed bottom-[28px] right-[28px] z-50 group flex items-center select-none">
+      <div className={`fixed bottom-[28px] right-[28px] z-50 group flex items-center select-none ${isOpen ? 'max-md:hidden' : ''}`}>
         {/* Hover Tooltip */}
         <div className="absolute right-[68px] top-1/2 -translate-y-1/2 bg-[#23282D] text-[#EDE9DF] border border-[#3D494F]/50 font-sans font-light text-[12px] px-3 py-2 rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 translate-x-2 group-hover:translate-x-0">
           Ask your Heritage Guide

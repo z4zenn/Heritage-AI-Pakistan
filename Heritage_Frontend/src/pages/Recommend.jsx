@@ -1,7 +1,64 @@
 import React, { useState } from 'react';
-import { Sparkles, AlertCircle, RefreshCw, ArrowLeft, Check, Compass, Landmark } from 'lucide-react';
+import { 
+  Sparkles, 
+  AlertCircle, 
+  RefreshCw, 
+  ArrowLeft, 
+  Check, 
+  Compass, 
+  Landmark,
+  Castle,
+  Scroll,
+  Flame,
+  Palette,
+  Crown,
+  Leaf,
+  Waves,
+  Mountain,
+  TreePine,
+  Flag,
+  User,
+  Heart,
+  Users,
+  Clock,
+  Sun,
+  Calendar
+} from 'lucide-react';
 import ExploreSiteCard from '../components/ExploreSiteCard';
 import { siteData } from '../data/siteData';
+
+// Custom 4-person family icon representing Family Adventure
+function FamilyIcon({ className }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      {/* Father (Left Adult) */}
+      <circle cx="5" cy="9" r="2" />
+      <path d="M2.5 18v-1a2.5 2.5 0 0 1 5 0v1" />
+
+      {/* Child 1 (Center Left) */}
+      <circle cx="9.8" cy="12" r="1.3" />
+      <path d="M8.2 18v-1a1.6 1.6 0 0 1 3.2 0v1" />
+
+      {/* Child 2 (Center Right) */}
+      <circle cx="14.2" cy="12" r="1.3" />
+      <path d="M12.6 18v-1a1.6 1.6 0 0 1 3.2 0v1" />
+
+      {/* Mother (Right Adult) */}
+      <circle cx="19" cy="9" r="2" />
+      <path d="M16.5 18v-1a2.5 2.5 0 0 1 5 0v1" />
+    </svg>
+  );
+}
+
 
 export default function Recommend() {
   // Navigation & flow states
@@ -180,35 +237,35 @@ export default function Recommend() {
 
   /* ── Options datasets ── */
   const q1Options = [
-    { id: 'arch', icon: '🏰', title: 'Ancient Architecture' },
-    { id: 'civ', icon: '🏺', title: 'Lost Civilizations' },
-    { id: 'sacred', icon: '🕌', title: 'Spiritual & Sacred Sites' },
-    { id: 'art', icon: '🎨', title: 'Art & Culture' },
-    { id: 'empires', icon: '⚔️', title: 'Empires & Dynasties' },
-    { id: 'nature', icon: '🌿', title: 'Nature & Landscape' }
+    { id: 'arch', icon: Castle, title: 'Ancient Architecture' },
+    { id: 'civ', icon: Scroll, title: 'Lost Civilizations' },
+    { id: 'sacred', icon: Flame, title: 'Spiritual & Sacred Sites' },
+    { id: 'art', icon: Palette, title: 'Art & Culture' },
+    { id: 'empires', icon: Crown, title: 'Empires & Dynasties' },
+    { id: 'nature', icon: Leaf, title: 'Nature & Landscape' }
   ];
 
   const q2Options = [
-    { name: 'Punjab', emoji: '🏰' },
-    { name: 'Sindh', emoji: '🏺' },
-    { name: 'KPK', emoji: '🕌' },
-    { name: 'Balochistan', emoji: '🏜️' },
-    { name: 'Gilgit-Baltistan', emoji: '🏔️' },
-    { name: 'AJK', emoji: '🌲' },
-    { name: 'All of Pakistan', emoji: '🇵🇰' }
+    { name: 'Punjab', icon: Waves },
+    { name: 'Sindh', icon: Scroll },
+    { name: 'KPK', icon: Compass },
+    { name: 'Balochistan', icon: Sun },
+    { name: 'Gilgit-Baltistan', icon: Mountain },
+    { name: 'AJK', icon: TreePine },
+    { name: 'All of Pakistan', icon: Flag }
   ];
 
   const q3Options = [
-    { id: 'solo', emoji: '🧍', title: 'Solo Explorer', desc: 'Your own pace, your own path' },
-    { id: 'couple', emoji: '👫', title: "Couple's Journey", desc: 'Shared discoveries' },
-    { id: 'family', emoji: '👨‍👩‍👧', title: 'Family Adventure', desc: 'Memories for everyone' },
-    { id: 'group', emoji: '👥', title: 'Group Expedition', desc: 'More stories, more magic' }
+    { id: 'solo', icon: User, title: 'Solo Explorer', desc: 'Your own pace, your own path' },
+    { id: 'couple', icon: Users, title: "Couple's Journey", desc: 'Shared discoveries' },
+    { id: 'family', icon: FamilyIcon, title: 'Family Adventure', desc: 'Memories for everyone' },
+    { id: 'group', icon: Compass, title: 'Group Expedition', desc: 'More stories, more magic' }
   ];
 
   const q4Options = [
-    { id: 'half', emoji: '⏳', title: 'Half Day', desc: 'A focused 3–4 hour visit' },
-    { id: 'full', emoji: '🌅', title: 'Full Day Immersion', desc: 'Dawn to dusk exploration' },
-    { id: 'multi', emoji: '🗺️', title: 'Multi-Day Expedition', desc: 'Go deep into history' }
+    { id: 'half', icon: Clock, title: 'Half Day', desc: 'A focused 3–4 hour visit' },
+    { id: 'full', icon: Sun, title: 'Full Day Immersion', desc: 'Dawn to dusk exploration' },
+    { id: 'multi', icon: Calendar, title: 'Multi-Day Expedition', desc: 'Go deep into history' }
   ];
 
   // Global tokens
@@ -359,6 +416,7 @@ export default function Recommend() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 max-w-2xl justify-center">
               {q1Options.map((opt) => {
                 const isSelected = selectedQ1.includes(opt.id);
+                const IconComponent = opt.icon;
                 return (
                   <button
                     key={opt.id}
@@ -371,10 +429,10 @@ export default function Recommend() {
                   >
                     {/* Icon */}
                     <div 
-                      className="text-3xl pt-2 transition-all duration-300"
+                      className="pt-2 transition-all duration-300"
                       style={{ filter: isSelected ? 'drop-shadow(0 0 8px #1D9E75)' : 'none' }}
                     >
-                      {opt.icon}
+                      <IconComponent className={`w-8 h-8 ${isSelected ? 'text-[#1D9E75]' : 'text-[#C8B89A]'}`} />
                     </div>
                     {/* Label */}
                     <span 
@@ -426,6 +484,7 @@ export default function Recommend() {
             <div className="flex flex-wrap gap-4 justify-center max-w-2xl my-2">
               {q2Options.map((opt) => {
                 const isSelected = selectedQ2.includes(opt.name);
+                const IconComponent = opt.icon;
                 return (
                   <button
                     key={opt.name}
@@ -436,7 +495,7 @@ export default function Recommend() {
                         : `bg-[#23282D] border-[#3D494F]/60 text-[#C8B89A] hover:bg-[#2a3035] hover:border-[#C8B89A]`
                     }`}
                   >
-                    <span className="text-xl">{opt.emoji}</span>
+                    <IconComponent className={`w-4 h-4 ${isSelected ? 'text-[#1D9E75]' : 'text-[#C8B89A]/80'}`} />
                     <span className="font-serif italic text-base font-normal">
                       {opt.name}
                     </span>
@@ -476,6 +535,7 @@ export default function Recommend() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl justify-center w-full">
               {q3Options.map((opt) => {
                 const isSelected = selectedQ3 === opt.id;
+                const IconComponent = opt.icon;
                 return (
                   <button
                     key={opt.id}
@@ -488,10 +548,10 @@ export default function Recommend() {
                   >
                     {/* Large icon */}
                     <div 
-                      className="text-4xl pt-4 mx-auto transition-all duration-300"
+                      className="pt-4 mx-auto transition-all duration-300"
                       style={{ filter: isSelected ? 'drop-shadow(0 0 8px #1D9E75)' : 'none' }}
                     >
-                      {opt.emoji}
+                      <IconComponent className={`w-10 h-10 mx-auto ${isSelected ? 'text-[#1D9E75]' : 'text-[#C8B89A]'}`} />
                     </div>
                     {/* Content Group */}
                     <div className="space-y-1.5 pb-2">
@@ -528,6 +588,7 @@ export default function Recommend() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl justify-center w-full">
               {q4Options.map((opt) => {
                 const isSelected = selectedQ4 === opt.id;
+                const IconComponent = opt.icon;
                 return (
                   <button
                     key={opt.id}
@@ -540,10 +601,10 @@ export default function Recommend() {
                   >
                     {/* Large icon */}
                     <div 
-                      className="text-4xl transition-all duration-300"
+                      className="transition-all duration-300"
                       style={{ filter: isSelected ? 'drop-shadow(0 0 8px #1D9E75)' : 'none' }}
                     >
-                      {opt.emoji}
+                      <IconComponent className={`w-8 h-8 mx-auto ${isSelected ? 'text-[#1D9E75]' : 'text-[#C8B89A]'}`} />
                     </div>
                     {/* Content Group */}
                     <div className="space-y-1.5 pb-1">
