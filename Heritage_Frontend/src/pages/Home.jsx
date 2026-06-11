@@ -52,7 +52,7 @@ export default function Home() {
 
       {/* 2. STATS BAR */}
       <div className={`w-full ${surf} py-6 px-6 select-none border-y ${bdr}`}>
-        <div className="max-w-7xl mx-auto flex flex-wrap justify-center md:justify-between items-center gap-6 text-sm font-sans uppercase text-center text-[#1D9E75]" style={{fontWeight: 500, letterSpacing: '0.08em'}}>
+        <div className="max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto flex flex-wrap justify-center md:justify-between items-center gap-6 text-sm font-sans uppercase text-center text-[#1D9E75]" style={{fontWeight: 500, letterSpacing: '0.08em'}}>
           <span>74 Heritage Sites</span>
           <span className={`hidden md:inline ${div.replace('bg-', 'text-')}`}>•</span>
           <span>6 Distinct Regions</span>
@@ -64,7 +64,7 @@ export default function Home() {
       </div>
 
       {/* 3. FEATURED REGIONS */}
-      <section className="w-full py-16 px-6 max-w-7xl mx-auto">
+      <section className="w-full py-16 px-6 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2 select-none">
           <span className="text-xs font-sans uppercase text-[#1D9E75]" style={{fontWeight: 500, letterSpacing: '0.08em'}}>Explore Territories</span>
           <h2 className={`text-3xl md:text-4xl font-serif font-bold ${tp}`}>Featured Regions</h2>
@@ -110,7 +110,7 @@ export default function Home() {
       <div className={`w-32 h-px ${div} mx-auto`} />
 
       {/* 4. WHY HERITAGE AI */}
-      <section className={`w-full py-16 px-6 ${bg} max-w-7xl mx-auto`}>
+      <section className={`w-full py-16 px-6 ${bg} max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto`}>
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2 select-none">
           <span className="text-xs font-sans uppercase text-[#1D9E75]" style={{fontWeight: 500, letterSpacing: '0.08em'}}>Pioneering Digits</span>
           <h2 className={`text-3xl md:text-4xl font-serif font-bold ${tp}`}>Why HeritageAI</h2>
@@ -137,7 +137,7 @@ export default function Home() {
       <div className={`w-32 h-px ${div} mx-auto`} />
 
       {/* 5. HOW IT WORKS */}
-      <section id="how-it-works" className={`w-full py-16 px-6 ${bg} max-w-7xl mx-auto`}>
+      <section id="how-it-works" className={`w-full py-16 px-6 ${bg} max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto`}>
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2 select-none">
           <span className="text-xs font-sans uppercase text-[#1D9E75]" style={{fontWeight: 500, letterSpacing: '0.08em'}}>Tour Pipeline</span>
           <h2 className={`text-3xl md:text-4xl font-serif font-bold ${tp}`}>How It Works</h2>
@@ -161,7 +161,7 @@ export default function Home() {
 
       {/* 6. POPULAR SITES */}
       <section className={`w-full py-16 px-6 ${bg} border-y ${bdr}`}>
-        <div className="max-w-7xl mx-auto mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="space-y-1">
             <span className="text-xs font-sans uppercase text-[#1D9E75]" style={{fontWeight: 500, letterSpacing: '0.08em'}}>Curated Picks</span>
             <h2 className={`text-3xl font-serif font-bold ${tp}`}>Popular Sites</h2>
@@ -177,9 +177,9 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="max-w-7xl mx-auto overflow-x-auto pb-6 -mx-4 px-4 flex gap-6 scrollbar-thin">
+        <div className="max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto flex overflow-x-auto md:grid md:grid-cols-3 2xl:grid-cols-6 gap-6 pb-6 -mx-4 px-4 scrollbar-thin">
           {popularSites.map((site) => (
-            <div key={site.id} className="w-[300px] shrink-0">
+            <div key={site.id} className="w-[300px] shrink-0 md:w-full md:shrink">
               <SiteCard {...site} />
             </div>
           ))}
@@ -187,7 +187,7 @@ export default function Home() {
       </section>
 
       {/* 7. TESTIMONIALS */}
-      <section className={`w-full py-16 px-6 max-w-7xl mx-auto select-none`}>
+      <section className={`w-full py-16 px-6 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto select-none`}>
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className="text-xs font-sans uppercase text-[#1D9E75]" style={{fontWeight: 500, letterSpacing: '0.08em'}}>Visitor Logs</span>
           <h2 className={`text-3xl md:text-4xl font-serif font-bold ${tp}`}>What Builders Say</h2>

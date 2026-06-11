@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Users, Shield, CreditCard, ChevronRight, CheckCircle, FileText } from 'lucide-react';
+import { Calendar, Users, Shield, CreditCard, ChevronRight, CheckCircle, FileText, Castle, MoonStar, Scroll, Gem, Flame, Compass, History, Landmark } from 'lucide-react';
 import { addEarnedStamp, getStampMotif } from '../utils/passport.js';
+
+const renderStampIcon = (iconName, className = "w-6 h-6") => {
+  switch (iconName) {
+    case 'castle': return <Castle className={className} />;
+    case 'moon-star': return <MoonStar className={className} />;
+    case 'landmark': return <Landmark className={className} />;
+    case 'scroll': return <Scroll className={className} />;
+    case 'gem': return <Gem className={className} />;
+    case 'flame': return <Flame className={className} />;
+    case 'compass': return <Compass className={className} />;
+    case 'history': return <History className={className} />;
+    default: return <Landmark className={className} />;
+  }
+};
 
 export default function BookingForm({ site }) {
   const navigate = useNavigate();
@@ -341,8 +355,8 @@ export default function BookingForm({ site }) {
               {/* Radial glow burst element */}
               <div className="absolute w-32 h-32 rounded-full bg-[#1D9E75]/20 animate-glow-burst pointer-events-none" />
               {/* Stamp Circle Container (drops and spring rotates) */}
-              <div className="w-[100px] h-[100px] rounded-full bg-gradient-to-br from-[#1a3a30] to-[#0f2420] border-[2.5px] border-[#1D9E75] flex items-center justify-center text-5xl shadow-[0_0_24px_rgba(29,158,117,0.3)] z-10 animate-stamp-drop">
-                {getStampMotif(site.civilizationEra, site.siteType).emoji}
+              <div className="w-[100px] h-[100px] rounded-full bg-gradient-to-br from-[#1a3a30] to-[#0f2420] border-[2.5px] border-[#1D9E75] flex items-center justify-center text-[#1D9E75] shadow-[0_0_24px_rgba(29,158,117,0.3)] z-10 animate-stamp-drop">
+                {renderStampIcon(getStampMotif(site.civilizationEra, site.siteType).icon, "w-[44px] h-[44px]")}
               </div>
               <div className="text-center mt-3.5 z-10">
                 <span className="text-[10px] font-sans font-semibold text-[#1D9E75] uppercase tracking-[0.1em]">

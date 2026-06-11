@@ -339,7 +339,7 @@ export default function SiteDetail() {
   const similarSites = siteData.filter(s => s.id !== site.id).slice(0, 4);
 
   return (
-    <div className="flex-1 w-full bg-[#FAF6F0] dark:bg-[#121212] max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6 select-none transition-colors duration-300">
+    <div className="flex-1 w-full bg-[#FAF6F0] dark:bg-[#121212] max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-8 flex flex-col gap-6 select-none transition-colors duration-300">
       
       {/* 1. Breadcrumb navigation */}
       <div className="flex items-center gap-2 text-xs font-sans text-stone-500 dark:text-stone-400">

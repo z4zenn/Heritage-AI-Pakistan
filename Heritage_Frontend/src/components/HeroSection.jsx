@@ -29,7 +29,7 @@ export default function HeroSection() {
 
       {/* 3. Left-Aligned Content */}
       <div className="absolute inset-0 flex items-center z-10 px-6">
-        <div className="max-w-7xl mx-auto w-full flex justify-start">
+        <div className="max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto w-full flex justify-start">
           <div className="max-w-2xl text-left space-y-6 flex flex-col items-start">
             
 

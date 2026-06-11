@@ -16,7 +16,7 @@ export const addEarnedStamp = (site) => {
       siteType: site.siteType,
       province: site.province,
       unescoListed: site.unescoListed,
-      emoji: motif.emoji,
+      icon: motif.icon,
       dateEarned: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     };
     stamps.push(stamp);
@@ -31,14 +31,19 @@ export const getStampMotif = (civilizationEra, siteType) => {
   const era = civilizationEra?.toLowerCase() || '';
   const type = siteType?.toLowerCase() || '';
   
-  if (era.includes('mughal')) return { emoji: '🕌', label: 'Mughal' };
-  if (era.includes('indus')) return { emoji: '🏺', label: 'Indus Valley' };
-  if (era.includes('gandhara') || era.includes('buddhist')) return { emoji: '☸️', label: 'Gandhara' };
-  if (era.includes('hindu')) return { emoji: '🪔', label: 'Hindu Heritage' };
-  if (era.includes('sufi')) return { emoji: '✦', label: 'Sufi Shrine' };
-  if (era.includes('islamic')) return { emoji: '☪️', label: 'Islamic Heritage' };
-  if (era.includes('neolithic')) return { emoji: '🪨', label: 'Neolithic' };
-  if (type.includes('fort')) return { emoji: '🏰', label: 'Historical Fort' };
+  // Prioritize type-based icons first (e.g., a Fort should have a Fort stamp even if it's from the Mughal era)
+  if (type.includes('fort')) {
+    if (era.includes('mughal')) return { icon: 'castle', label: 'Mughal Fort' };
+    return { icon: 'castle', label: 'Historical Fort' };
+  }
   
-  return { emoji: '🏛️', label: 'Monument' };
+  if (era.includes('mughal')) return { icon: 'moon-star', label: 'Mughal' };
+  if (era.includes('indus')) return { icon: 'gem', label: 'Indus Valley' };
+  if (era.includes('gandhara') || era.includes('buddhist')) return { icon: 'scroll', label: 'Gandhara' };
+  if (era.includes('hindu')) return { icon: 'flame', label: 'Hindu Heritage' };
+  if (era.includes('sufi')) return { icon: 'flame', label: 'Sufi Shrine' };
+  if (era.includes('islamic')) return { icon: 'moon-star', label: 'Islamic Heritage' };
+  if (era.includes('neolithic')) return { icon: 'gem', label: 'Neolithic' };
+  
+  return { icon: 'landmark', label: 'Monument' };
 };

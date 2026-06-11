@@ -1,9 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, Landmark, Sun, Moon, User, Lock, Settings, LogOut, Map } from 'lucide-react';
+import { Menu, X, Landmark, Sun, Moon, User, Lock, Settings, LogOut, Map, Castle, MoonStar, Scroll, Gem, Flame, Compass, History, Shield } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { getEarnedStamps, getStampMotif } from '../utils/passport.js';
 import { siteData } from '../data/siteData.js';
+
+const getLoggedInUser = () => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      if (payload && payload.role) return payload;
+    } catch (e) {
+      // Ignored
+    }
+  }
+  const user = localStorage.getItem('user');
+  if (user) {
+    try {
+      return JSON.parse(user);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+};
+
+const renderStampIcon = (iconName, className = "w-6 h-6") => {
+  switch (iconName) {
+    case 'castle': return <Castle className={className} />;
+    case 'moon-star': return <MoonStar className={className} />;
+    case 'landmark': return <Landmark className={className} />;
+    case 'scroll': return <Scroll className={className} />;
+    case 'gem': return <Gem className={className} />;
+    case 'flame': return <Flame className={className} />;
+    case 'compass': return <Compass className={className} />;
+    case 'history': return <History className={className} />;
+    default: return <Landmark className={className} />;
+  }
+};
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,6 +59,9 @@ export default function Navbar() {
 
   // Retrieve earned stamps dynamically
   const earnedStamps = getEarnedStamps();
+
+  // Read logged in user dynamically
+  const loggedInUser = getLoggedInUser();
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -63,8 +106,8 @@ export default function Navbar() {
   const unescoSites = earnedStamps.filter(s => s.unescoListed).length;
 
   return (
-    <header className={`${isHome ? 'fixed' : 'sticky'} top-0 z-50 w-full px-4 sm:px-6 lg:px-8 pt-4 pb-2 select-none pointer-events-none`}>
-      <div className={`max-w-7xl mx-auto w-full pointer-events-auto bg-white/30 dark:bg-[#23282D]/55 backdrop-blur-xl border border-white/30 dark:border-[#3D494F]/40 shadow-lg hover:shadow-xl transition-all duration-300 ${isOpen ? 'rounded-3xl' : 'rounded-full'}`}>
+    <header className={`${isHome ? 'fixed left-0 right-0' : 'sticky'} top-0 z-50 w-full px-4 sm:px-6 lg:px-8 pt-4 pb-2 select-none pointer-events-none`}>
+      <div className={`max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto w-full pointer-events-auto bg-white/30 dark:bg-[#23282D]/55 backdrop-blur-xl border border-white/30 dark:border-[#3D494F]/40 shadow-lg hover:shadow-xl transition-all duration-300 ${isOpen ? 'rounded-3xl' : 'rounded-full'}`}>
         <div className="px-8 h-20 flex items-center justify-between">
           
           {/* Brand Logo */}
@@ -150,15 +193,19 @@ export default function Navbar() {
 
                     {earnedStamps.length > 0 ? (
                       <div className="flex gap-2.5 flex-wrap">
-                        {earnedStamps.slice(-3).map((stamp) => (
-                          <div
-                            key={stamp.siteId}
-                            className="w-[32px] h-[32px] rounded-full bg-[#141618] border border-[#1D9E75] flex items-center justify-center text-[15px] shadow-inner"
-                            title={stamp.siteName}
-                          >
-                            {stamp.emoji}
-                          </div>
-                        ))}
+                        {earnedStamps.slice(-3).map((stamp) => {
+                          const site = siteData.find(s => s.id === stamp.siteId);
+                          const iconName = site ? getStampMotif(site.civilizationEra, site.siteType).icon : (stamp.icon || 'landmark');
+                          return (
+                            <div
+                              key={stamp.siteId}
+                              className="w-[32px] h-[32px] rounded-full bg-[#141618] border border-[#1D9E75] flex items-center justify-center text-[#1D9E75] shadow-inner"
+                              title={stamp.siteName}
+                            >
+                              {renderStampIcon(iconName, "w-[16px] h-[16px]")}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-[12px] font-sans text-[#C8B89A] italic font-light">
@@ -224,6 +271,28 @@ export default function Navbar() {
               )}
             </div>
 
+            {/* Conditional Dashboard/Admin Link */}
+            {loggedInUser && loggedInUser.role === 'admin' && (
+              <Link
+                to="/admin/dashboard"
+                className="flex items-center gap-1.5 hover:opacity-85 transition-opacity"
+                style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 500, fontSize: '13px', color: '#1D9E75' }}
+              >
+                <Shield className="w-[14px] h-[14px]" />
+                <span>Admin</span>
+              </Link>
+            )}
+            {loggedInUser && loggedInUser.role === 'user' && (
+              <Link
+                to="/dashboard"
+                className="flex items-center gap-1.5 hover:opacity-85 transition-opacity"
+                style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 500, fontSize: '13px', color: '#C8B89A' }}
+              >
+                <User className="w-[14px] h-[14px]" />
+                <span>Dashboard</span>
+              </Link>
+            )}
+
             <Link
               to="/explore"
               className="px-6 py-2.5 rounded-full bg-[#1D9E75] hover:bg-[#1D9E75]/85 text-[#EDE9DF] font-sans text-sm shadow-md transition-all duration-300 active:scale-95 block hover:shadow-lg"
@@ -270,15 +339,19 @@ export default function Navbar() {
 
                     {earnedStamps.length > 0 ? (
                       <div className="flex gap-2.5 flex-wrap">
-                        {earnedStamps.slice(-3).map((stamp) => (
-                          <div
-                            key={stamp.siteId}
-                            className="w-[32px] h-[32px] rounded-full bg-[#141618] border border-[#1D9E75] flex items-center justify-center text-[15px] shadow-inner"
-                            title={stamp.siteName}
-                          >
-                            {stamp.emoji}
-                          </div>
-                        ))}
+                        {earnedStamps.slice(-3).map((stamp) => {
+                          const site = siteData.find(s => s.id === stamp.siteId);
+                          const iconName = site ? getStampMotif(site.civilizationEra, site.siteType).icon : (stamp.icon || 'landmark');
+                          return (
+                            <div
+                              key={stamp.siteId}
+                              className="w-[32px] h-[32px] rounded-full bg-[#141618] border border-[#1D9E75] flex items-center justify-center text-[#1D9E75] shadow-inner"
+                              title={stamp.siteName}
+                            >
+                              {renderStampIcon(iconName, "w-[16px] h-[16px]")}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-[12px] font-sans text-[#C8B89A] italic font-light">
@@ -390,6 +463,34 @@ export default function Navbar() {
               </button>
             </div>
 
+            {/* Mobile Conditional Dashboard/Admin Link */}
+            {loggedInUser && loggedInUser.role === 'admin' && (
+              <div className="border-t border-[#3D494F] pt-3 mt-1 flex justify-center">
+                <Link
+                  to="/admin/dashboard"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-1.5 hover:opacity-85 transition-opacity justify-center"
+                  style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 500, fontSize: '13px', color: '#1D9E75' }}
+                >
+                  <Shield className="w-[14px] h-[14px]" />
+                  <span>Admin</span>
+                </Link>
+              </div>
+            )}
+            {loggedInUser && loggedInUser.role === 'user' && (
+              <div className="border-t border-[#3D494F] pt-3 mt-1 flex justify-center">
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-1.5 hover:opacity-85 transition-opacity justify-center"
+                  style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 500, fontSize: '13px', color: '#C8B89A' }}
+                >
+                  <User className="w-[14px] h-[14px]" />
+                  <span>Dashboard</span>
+                </Link>
+              </div>
+            )}
+
             <div className="border-t border-[#3D494F] pt-3 mt-1">
               <Link
                 to="/explore"
@@ -490,10 +591,10 @@ export default function Navbar() {
                           style={{ boxShadow: '0 0 20px rgba(29,158,117,0.15)' }}
                         >
                           <div 
-                            className="w-[72px] h-[72px] rounded-full border-2 border-[#1D9E75] flex items-center justify-center text-[28px] shadow-md mx-auto"
+                            className="w-[72px] h-[72px] rounded-full border-2 border-[#1D9E75] flex items-center justify-center text-[#1D9E75] shadow-md mx-auto"
                             style={{ background: 'linear-gradient(135deg, #1a3a30, #0f2420)' }}
                           >
-                            {stamp.emoji || motif.emoji}
+                            {renderStampIcon(motif.icon, "w-[32px] h-[32px]")}
                           </div>
                           <h4 className="font-serif font-bold text-[13px] text-[#EDE9DF] mt-[12px] leading-tight truncate w-full">
                             {site.name}

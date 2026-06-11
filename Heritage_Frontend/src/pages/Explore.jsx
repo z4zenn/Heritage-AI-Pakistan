@@ -131,6 +131,13 @@ export default function Explore() {
   const [selectedEra, setSelectedEra] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Pagination state and automatic reset on filter updates
+  const [visibleCount, setVisibleCount] = useState(6);
+
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [searchQuery, selectedProvince, selectedType, unescoOnly, selectedEra]);
+
   // Temporary drawer states
   const [tempProvince, setTempProvince] = useState(selectedProvince);
   const [tempType, setTempType] = useState(selectedType);
@@ -380,7 +387,7 @@ export default function Explore() {
   const textMuted   = "text-[#6B6560] dark:text-[#C8B89A]";
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-16 py-12 flex flex-col gap-12 select-none">
+    <div className="flex-1 w-full max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 md:px-12 lg:px-16 py-12 flex flex-col gap-12 select-none">
       
       {/* Page Header - Editorial Opener */}
       <div className="pt-16 md:pt-20 pb-4 flex flex-col gap-3">
@@ -682,10 +689,33 @@ export default function Explore() {
       {/* Cards Grid */}
       <main className="w-full">
         {filteredSites.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[28px] items-stretch">
-            {filteredSites.map((site) => (
-              <ExploreSiteCard key={site.id} {...site} />
-            ))}
+          <div className="flex flex-col gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[28px] items-stretch">
+              {filteredSites.slice(0, visibleCount).map((site) => (
+                <ExploreSiteCard key={site.id} {...site} />
+              ))}
+            </div>
+
+            {filteredSites.length > visibleCount && (
+              <div className="flex flex-col items-center gap-3 pt-6 border-t border-[#D5CFC6]/25 dark:border-[#3D494F]/15">
+                <p className="text-xs font-sans text-[#6B6560] dark:text-[#C8B89A] font-light">
+                  Showing <span className="font-semibold text-[#1A1E21] dark:text-[#EDE9DF]">{visibleCount}</span> of <span className="font-semibold text-[#1A1E21] dark:text-[#EDE9DF]">{filteredSites.length}</span> sites
+                </p>
+                <div className="w-48 h-1 bg-[#D5CFC6]/30 dark:bg-[#3D494F]/30 rounded-full overflow-hidden mb-2">
+                  <div 
+                    className="h-full bg-[#1D9E75] transition-all duration-500 rounded-full" 
+                    style={{ width: `${(visibleCount / filteredSites.length) * 100}%` }}
+                  />
+                </div>
+                <button
+                  onClick={() => setVisibleCount(filteredSites.length)}
+                  className="px-8 py-3.5 rounded-full border border-[#1D9E75] text-[#1D9E75] hover:bg-[#1D9E75]/5 dark:hover:bg-[#1D9E75]/10 font-sans font-semibold text-xs tracking-wider uppercase transition-all duration-300 hover:scale-[1.02] cursor-pointer flex items-center gap-2 shadow-[0_4px_12px_rgba(29,158,117,0.08)]"
+                >
+                  <span>View More Sites</span>
+                  <span className="text-sm">↓</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="py-24 text-center border border-dashed border-[#D5CFC6]/50 dark:border-[#3D494F]/40 rounded-2xl space-y-4 bg-[#F5F2ED]/50 dark:bg-[#23282D]/20">
@@ -872,6 +902,8 @@ function FilterDrawer({
   siteTypes,
   eras
 }) {
+  const [isEraDropdownOpen, setIsEraDropdownOpen] = useState(false);
+
   if (!showFilters) return null;
 
   return (
@@ -989,17 +1021,60 @@ function FilterDrawer({
             <span className="text-[10px] font-sans uppercase tracking-[0.15em] text-[#6B6560]/75 dark:text-[#C8B89A]/60 font-light block">
               Civilization Era
             </span>
-            <div className="relative border-b border-[#D5CFC6]/50 dark:border-[#3D494F]/40 pb-1.5 max-w-xs">
-              <select
-                id="era-select"
-                value={tempEra}
-                onChange={(e) => setTempEra(e.target.value)}
-                className="w-full bg-transparent text-xs font-sans text-[#1A1E21] dark:text-[#EDE9DF] border-none focus:outline-none appearance-none cursor-pointer pr-6 py-1"
+            <div className="relative max-w-xs">
+              <button
+                type="button"
+                onClick={() => setIsEraDropdownOpen(!isEraDropdownOpen)}
+                className="w-full flex items-center justify-between text-left py-2 px-3 bg-[#F5F2ED] dark:bg-[#23282D] border border-[#D5CFC6] dark:border-[#3D494F] rounded-lg text-xs font-sans text-[#1A1E21] dark:text-[#EDE9DF] hover:border-[#1D9E75] focus:outline-none focus:border-[#1D9E75] transition-all duration-300 cursor-pointer"
               >
-                <option value="All">All Civilization Eras</option>
-                {eras.map(e => <option key={e} value={e} className="bg-[#F5F2ED] dark:bg-[#23282D]">{e}</option>)}
-              </select>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#6B6560]/75 dark:text-[#C8B89A]/60 text-[9px]">▼</div>
+                <span className="truncate pr-2">{tempEra === 'All' ? 'All Civilization Eras' : tempEra}</span>
+                <span className={`text-[9px] text-[#6B6560] dark:text-[#C8B89A] transition-transform duration-300 ${isEraDropdownOpen ? 'rotate-180' : 'rotate-0'}`}>
+                  ▼
+                </span>
+              </button>
+
+              {/* Floating dropdown menu */}
+              {isEraDropdownOpen && (
+                <>
+                  {/* Backdrop to close the dropdown when clicking outside */}
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setIsEraDropdownOpen(false)}
+                  />
+                  <div className="absolute left-0 right-0 mt-1.5 bg-[#F5F2ED] dark:bg-[#23282D] border border-[#D5CFC6] dark:border-[#3D494F] rounded-lg shadow-xl overflow-hidden max-h-[220px] overflow-y-auto z-20 divide-y divide-[#D5CFC6]/20 dark:divide-[#3D494F]/20">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempEra('All');
+                        setIsEraDropdownOpen(false);
+                      }}
+                      className={`w-full text-left py-2.5 px-3.5 text-xs font-sans hover:bg-[#1D9E75]/10 hover:text-[#1D9E75] transition-colors duration-150 cursor-pointer ${
+                        tempEra === 'All' ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-semibold' : 'text-[#6B6560] dark:text-[#C8B89A]'
+                      }`}
+                    >
+                      All Civilization Eras
+                    </button>
+                    {eras.map((era) => {
+                      const isActive = tempEra === era;
+                      return (
+                        <button
+                          key={era}
+                          type="button"
+                          onClick={() => {
+                            setTempEra(era);
+                            setIsEraDropdownOpen(false);
+                          }}
+                          className={`w-full text-left py-2.5 px-3.5 text-xs font-sans hover:bg-[#1D9E75]/10 hover:text-[#1D9E75] transition-colors duration-150 cursor-pointer ${
+                            isActive ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-semibold' : 'text-[#6B6560] dark:text-[#C8B89A]'
+                          }`}
+                        >
+                          {era}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
