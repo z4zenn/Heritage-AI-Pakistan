@@ -2,14 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Landmark, X, Send } from 'lucide-react';
 import Groq from "groq-sdk";
 
-// Initialize the Groq client using the VITE environment variable
-const client = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+const getGroqClient = () => {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey || apiKey === 'your_groq_api_key_here') {
+    return null;
+  }
+  return new Groq({
+    apiKey,
+    dangerouslyAllowBrowser: true
+  });
+};
 
 // Replace sendMessage function with exactly this:
 const sendMessage = async (userMessage, siteData, history) => {
+  const client = getGroqClient();
+  if (!client) {
+    throw new Error("Chatbot is currently offline (Groq API key is missing).");
+  }
   const response = await client.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     max_tokens: 300,

@@ -1,13 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import BookingForm from '../components/BookingForm';
 import { siteData } from '../data/siteData';
+import { api } from '../services/api';
 
 export default function Book() {
   const { siteId } = useParams();
+  const [site, setSite] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Find site
-  const site = siteDatabase[siteId] || siteDatabase['lahore-fort'];
+  useEffect(() => {
+    const loadSite = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.fetchSiteById(siteId);
+        setSite(data);
+      } catch (err) {
+        console.error("Failed to fetch site details for booking:", err);
+        const fallback = siteData.find(s => s.id === siteId) || siteData.find(s => s.id === 'lahore-fort') || siteData[0];
+        setSite(fallback);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSite();
+  }, [siteId]);
+
+  if (isLoading || !site) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-screen bg-[#FAF6F0] dark:bg-[#121212] text-[#2D1B00] dark:text-[#FAF6F0]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-[#A0522D] dark:border-[#D4A843] border-t-transparent rounded-full animate-spin" />
+          <p className="font-sans text-xs font-light text-stone-500 dark:text-stone-400 tracking-wider uppercase text-center">Retrieving destination details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 w-full bg-[#FAF6F0] dark:bg-[#121212] py-10 px-6 select-none transition-colors duration-300">
@@ -32,8 +60,3 @@ export default function Book() {
   );
 }
 
-// Custom internal database mapper
-const siteDatabase = siteData.reduce((acc, current) => {
-  acc[current.id] = current;
-  return acc;
-}, {});

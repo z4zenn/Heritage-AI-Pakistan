@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Star, Crown, MapPin, Landmark, Calendar, Users, Calculator, MessageSquare, Compass, ShieldCheck } from 'lucide-react';
 import SiteCard from '../components/SiteCard';
 import { siteData } from '../data/siteData';
+import { api } from '../services/api';
 import HeritageChatbot from '../components/HeritageChatbot';
 
 
@@ -10,8 +11,25 @@ export default function SiteDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Find site
-  const site = siteDatabase[id] || siteDatabase['lahore-fort'];
+  const [site, setSite] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadSite = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.fetchSiteById(id);
+        setSite(data);
+      } catch (err) {
+        console.error("Failed to fetch site details:", err);
+        const fallback = siteData.find(s => s.id === id) || siteData.find(s => s.id === 'lahore-fort') || siteData[0];
+        setSite(fallback);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSite();
+  }, [id]);
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('Overview');
@@ -24,7 +42,9 @@ export default function SiteDetail() {
   const [mapError, setMapError] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const mapRef = useRef(null);
-  const googleMapInstance = useRef(null);
+  const leafletMapInstance = useRef(null);
+
+
 
   // Haversine distance calculator helper
   const getHaversineDistance = (lat1, lon1, lat2, lon2) => {
@@ -41,34 +61,37 @@ export default function SiteDetail() {
     return R * c;
   };
 
-  // Google Maps JS API script dynamic loader
+  // Leaflet JS & CSS dynamic loader
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey || apiKey === 'your_google_maps_api_key_here') {
-      setMapError(true);
-      return;
+    // 1. Load Leaflet CSS
+    const cssId = 'leaflet-css';
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement('link');
+      link.id = cssId;
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
     }
 
-    const scriptId = 'google-maps-api-script';
+    // 2. Load Leaflet JS
+    const scriptId = 'leaflet-js';
     let script = document.getElementById(scriptId);
 
-    const initMap = () => {
+    const initLeaflet = () => {
       setMapLoaded(true);
     };
 
-    if (window.google && window.google.maps) {
-      initMap();
+    if (window.L) {
+      initLeaflet();
     } else {
       if (!script) {
         script = document.createElement('script');
         script.id = scriptId;
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=__initGoogleMap`;
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
         script.async = true;
-        script.defer = true;
-        
-        window.__initGoogleMap = () => {
-          initMap();
-          delete window.__initGoogleMap;
+
+        script.onload = () => {
+          initLeaflet();
         };
 
         script.onerror = () => {
@@ -78,8 +101,8 @@ export default function SiteDetail() {
         document.head.appendChild(script);
       } else {
         const interval = setInterval(() => {
-          if (window.google && window.google.maps) {
-            initMap();
+          if (window.L) {
+            initLeaflet();
             clearInterval(interval);
           }
         }, 100);
@@ -88,128 +111,37 @@ export default function SiteDetail() {
     }
   }, []);
 
-  // Map Instance and Markers lifecycle hook
   useEffect(() => {
-    if (!mapLoaded || !mapRef.current || !window.google || !window.google.maps) return;
+    if (!site || !mapLoaded || !mapRef.current || !window.L) return;
 
-    const mapOptions = {
-      center: { lat: Number(site.lat), lng: Number(site.lon) },
-      zoom: 14,
-      mapTypeId: 'roadmap',
-      styles: [
-        { elementType: "geometry", stylers: [{ color: "#1a1f23" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#141618" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#C8B89A" }] },
-        {
-          featureType: "road",
-          elementType: "geometry",
-          stylers: [{ color: "#23282D" }]
-        },
-        {
-          featureType: "road",
-          elementType: "geometry.stroke",
-          stylers: [{ color: "#3D494F" }]
-        },
-        {
-          featureType: "road",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#EDE9DF" }]
-        },
-        {
-          featureType: "water",
-          elementType: "geometry",
-          stylers: [{ color: "#0f1a1c" }]
-        },
-        {
-          featureType: "water",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#1D9E75" }]
-        },
-        {
-          featureType: "poi",
-          elementType: "geometry",
-          stylers: [{ color: "#1e2428" }]
-        },
-        {
-          featureType: "poi.park",
-          elementType: "geometry",
-          stylers: [{ color: "#1a2e20" }]
-        },
-        {
-          featureType: "transit",
-          elementType: "geometry",
-          stylers: [{ color: "#23282D" }]
-        },
-        {
-          featureType: "administrative",
-          elementType: "geometry.stroke",
-          stylers: [{ color: "#3D494F" }]
-        },
-        {
-          featureType: "administrative.land_parcel",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#C8B89A" }]
-        }
-      ],
-      disableDefaultUI: true,
-      clickableIcons: false,
-      scrollwheel: true,
-      draggable: true
-    };
+    // Remove existing map instance if it exists to avoid re-initialization errors
+    if (leafletMapInstance.current) {
+      leafletMapInstance.current.remove();
+      leafletMapInstance.current = null;
+    }
 
-    const map = new window.google.maps.Map(mapRef.current, mapOptions);
-    googleMapInstance.current = map;
+    const L = window.L;
 
-    // Custom Zoom Controls Style Injection
-    const zoomControlDiv = document.createElement('div');
-    zoomControlDiv.style.margin = '16px';
-    zoomControlDiv.style.display = 'flex';
-    zoomControlDiv.style.flexDirection = 'column';
-    zoomControlDiv.style.gap = '6px';
+    // Initialize Leaflet map centered on current site
+    const map = L.map(mapRef.current, {
+      zoomControl: false,
+      scrollWheelZoom: true,
+      dragging: true
+    }).setView([Number(site.lat), Number(site.lon)], 14);
 
-    const zoomInBtn = document.createElement('button');
-    zoomInBtn.innerHTML = '+';
-    zoomInBtn.type = 'button';
-    zoomInBtn.style.width = '36px';
-    zoomInBtn.style.height = '36px';
-    zoomInBtn.style.backgroundColor = '#23282D';
-    zoomInBtn.style.color = '#EDE9DF';
-    zoomInBtn.style.border = '0.5px solid #3D494F';
-    zoomInBtn.style.borderRadius = '8px';
-    zoomInBtn.style.fontSize = '20px';
-    zoomInBtn.style.fontWeight = 'normal';
-    zoomInBtn.style.cursor = 'pointer';
-    zoomInBtn.style.display = 'flex';
-    zoomInBtn.style.alignItems = 'center';
-    zoomInBtn.style.justifyContent = 'center';
-    zoomInBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-    zoomInBtn.style.outline = 'none';
+    leafletMapInstance.current = map;
 
-    const zoomOutBtn = document.createElement('button');
-    zoomOutBtn.innerHTML = '−';
-    zoomOutBtn.type = 'button';
-    zoomOutBtn.style.width = '36px';
-    zoomOutBtn.style.height = '36px';
-    zoomOutBtn.style.backgroundColor = '#23282D';
-    zoomOutBtn.style.color = '#EDE9DF';
-    zoomOutBtn.style.border = '0.5px solid #3D494F';
-    zoomOutBtn.style.borderRadius = '8px';
-    zoomOutBtn.style.fontSize = '20px';
-    zoomOutBtn.style.fontWeight = 'normal';
-    zoomOutBtn.style.cursor = 'pointer';
-    zoomOutBtn.style.display = 'flex';
-    zoomOutBtn.style.alignItems = 'center';
-    zoomOutBtn.style.justifyContent = 'center';
-    zoomOutBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-    zoomOutBtn.style.outline = 'none';
+    // Add CartoDB Dark Matter tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(map);
 
-    zoomInBtn.addEventListener('click', () => map.setZoom(map.getZoom() + 1));
-    zoomOutBtn.addEventListener('click', () => map.setZoom(map.getZoom() - 1));
-
-    zoomControlDiv.appendChild(zoomInBtn);
-    zoomControlDiv.appendChild(zoomOutBtn);
-
-    map.controls[window.google.maps.ControlPosition.BOTTOM_RIGHT].push(zoomControlDiv);
+    // Add zoom control at bottom right to match original layout
+    L.control.zoom({
+      position: 'bottomright'
+    }).addTo(map);
 
     // Primary Marker Creation (Teardrop shape + monument logo)
     const primaryMarkerSvg = `
@@ -219,30 +151,26 @@ export default function SiteDetail() {
       </svg>
     `;
 
-    const primaryMarker = new window.google.maps.Marker({
-      position: { lat: Number(site.lat), lng: Number(site.lon) },
-      map: map,
-      title: site.name,
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(primaryMarkerSvg),
-        scaledSize: new window.google.maps.Size(36, 44),
-        anchor: new window.google.maps.Point(18, 44)
-      }
+    const primaryIcon = L.divIcon({
+      html: `<div style="display: flex; justify-content: center; align-items: center; width: 36px; height: 44px; margin-left: -18px; margin-top: -44px;">${primaryMarkerSvg}</div>`,
+      className: 'custom-primary-marker',
+      iconSize: [36, 44],
+      iconAnchor: [18, 44]
     });
 
+    const primaryMarker = L.marker([Number(site.lat), Number(site.lon)], { icon: primaryIcon }).addTo(map);
+
     const primaryInfoWindowHtml = `
-      <div style="padding: 8px; font-family: 'Outfit', sans-serif; background-color: #23282D; border: 0.5px solid #3D494F; border-radius: 8px; color: #EDE9DF; min-width: 180px;">
-        <h4 style="font-family: 'Libre Baskerville', Georgia, serif; font-weight: bold; font-size: 14px; margin: 0 0 6px 0; color: #EDE9DF;">${site.name}</h4>
+      <div style="padding: 4px; font-family: 'Outfit', sans-serif; color: #EDE9DF; min-width: 180px;">
+        <h4 style="font-family: 'Libre Baskerville', Georgia, serif; font-weight: bold; font-size: 14px; margin: 0 0 4px 0; color: #EDE9DF;">${site.name}</h4>
         <p style="font-size: 11px; margin: 0; color: #C8B89A;">${site.city}, ${site.province}</p>
       </div>
     `;
 
-    const primaryInfoWindow = new window.google.maps.InfoWindow({
-      content: primaryInfoWindowHtml
-    });
-
-    primaryMarker.addListener('click', () => {
-      primaryInfoWindow.open(map, primaryMarker);
+    primaryMarker.bindPopup(primaryInfoWindowHtml, {
+      className: 'leaflet-custom-popup',
+      closeButton: false,
+      offset: [0, -32]
     });
 
     // Query for nearby sites within 100km
@@ -256,9 +184,6 @@ export default function SiteDetail() {
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 5);
 
-    const markersList = [primaryMarker];
-    const infoWindowsList = [primaryInfoWindow];
-
     nearbySites.forEach(s => {
       const secondaryMarkerSvg = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 30" width="26" height="32">
@@ -267,49 +192,50 @@ export default function SiteDetail() {
         </svg>
       `;
 
-      const secondaryMarker = new window.google.maps.Marker({
-        position: { lat: Number(s.lat), lng: Number(s.lon) },
-        map: map,
-        title: s.name,
-        icon: {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(secondaryMarkerSvg),
-          scaledSize: new window.google.maps.Size(26, 32),
-          anchor: new window.google.maps.Point(13, 32)
-        }
+      const secondaryIcon = L.divIcon({
+        html: `<div style="display: flex; justify-content: center; align-items: center; width: 26px; height: 32px; margin-left: -13px; margin-top: -32px;">${secondaryMarkerSvg}</div>`,
+        className: 'custom-secondary-marker',
+        iconSize: [26, 32],
+        iconAnchor: [13, 32]
       });
 
+      const secondaryMarker = L.marker([Number(s.lat), Number(s.lon)], { icon: secondaryIcon }).addTo(map);
+
       const secondaryInfoWindowHtml = `
-        <div style="padding: 8px; font-family: 'Outfit', sans-serif; background-color: #23282D; border: 0.5px solid #3D494F; border-radius: 8px; color: #EDE9DF; min-width: 160px;">
+        <div style="padding: 4px; font-family: 'Outfit', sans-serif; color: #EDE9DF; min-width: 160px;">
           <h4 style="font-family: 'Libre Baskerville', Georgia, serif; font-weight: bold; font-size: 13px; margin: 0 0 4px 0; color: #EDE9DF;">${s.name}</h4>
           <p style="font-size: 10px; margin: 0 0 6px 0; color: #C8B89A;">${s.city}, ${s.province} (${Math.round(s.distance)} km away)</p>
           <a href="/site/${s.id}" style="font-size: 11px; font-weight: bold; color: #1D9E75; text-decoration: none; display: inline-block;">View Site →</a>
         </div>
       `;
 
-      const secondaryInfoWindow = new window.google.maps.InfoWindow({
-        content: secondaryInfoWindowHtml
+      secondaryMarker.bindPopup(secondaryInfoWindowHtml, {
+        className: 'leaflet-custom-popup',
+        closeButton: false,
+        offset: [0, -24]
       });
-
-      secondaryMarker.addListener('click', () => {
-        secondaryInfoWindow.open(map, secondaryMarker);
-      });
-
-      markersList.push(secondaryMarker);
-      infoWindowsList.push(secondaryInfoWindow);
     });
 
-    // Cleanup listeners and markers
+    // Cleanup Leaflet map on component unmount or site change
     return () => {
-      markersList.forEach(m => {
-        window.google.maps.event.clearInstanceListeners(m);
-        m.setMap(null);
-      });
-      infoWindowsList.forEach(iw => iw.close());
-      if (googleMapInstance.current) {
-        googleMapInstance.current = null;
+      if (leafletMapInstance.current) {
+        leafletMapInstance.current.remove();
+        leafletMapInstance.current = null;
       }
     };
-  }, [mapLoaded, site.id]);
+  }, [mapLoaded, site?.id]);
+
+  // Return spinner if loading or site not resolved yet
+  if (isLoading || !site) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-screen bg-[#141618] text-[#EDE9DF]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+          <p className="font-sans text-xs font-light text-[#C8B89A] tracking-wider uppercase">Loading historical archives...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Calculations
   const baseTicket = site.unescoListed ? 800 : 500;
@@ -399,9 +325,57 @@ export default function SiteDetail() {
           Location & Nearby Sites
         </span>
         
+        {/* Dynamic style injection for premium dark-themed Leaflet popups & controls */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .leaflet-custom-popup .leaflet-popup-content-wrapper {
+            background-color: #23282D !important;
+            color: #EDE9DF !important;
+            border: 0.5px solid #3D494F !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+            padding: 8px 12px !important;
+          }
+          .leaflet-custom-popup .leaflet-popup-content {
+            margin: 0 !important;
+            line-height: 1.4 !important;
+          }
+          .leaflet-custom-popup .leaflet-popup-tip {
+            background-color: #23282D !important;
+            border-left: 0.5px solid #3D494F !important;
+            border-bottom: 0.5px solid #3D494F !important;
+            box-shadow: none !important;
+          }
+          /* Style standard Leaflet zoom controls to match dark theme */
+          .leaflet-bar {
+            border: 0.5px solid #3D494F !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+          }
+          .leaflet-bar a {
+            background-color: #23282D !important;
+            color: #EDE9DF !important;
+            border-bottom: 0.5px solid #3D494F !important;
+            transition: background-color 0.2s ease, color 0.2s ease !important;
+          }
+          .leaflet-bar a:hover {
+            background-color: #3D494F !important;
+            color: #1D9E75 !important;
+          }
+          .leaflet-bar a.leaflet-disabled {
+            background-color: #1a1f23 !important;
+            color: #666666 !important;
+          }
+          /* Custom marker wrappers formatting */
+          .custom-primary-marker, .custom-secondary-marker {
+            background: none !important;
+            border: none !important;
+          }
+        ` }} />
+
         {mapError ? (
           <div className="w-full h-[280px] md:h-[420px] rounded-2xl border-[0.5px] border-[#3D494F] bg-[#1a1f23] flex items-center justify-center text-[#C8B89A] font-sans text-xs">
-            <span>Map unavailable — add VITE_GOOGLE_MAPS_API_KEY to .env</span>
+            <span>Map unavailable — failed to load mapping resources.</span>
           </div>
         ) : (
           <div 

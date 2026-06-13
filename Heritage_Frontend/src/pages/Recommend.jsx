@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import ExploreSiteCard from '../components/ExploreSiteCard';
 import { siteData } from '../data/siteData';
+import { api } from '../services/api';
 
 // Custom 4-person family icon representing Family Adventure
 function FamilyIcon({ className }) {
@@ -128,59 +129,76 @@ export default function Recommend() {
   };
 
   // Submit and Calculate Matches
-  const handleSubmitQuiz = () => {
+  const handleSubmitQuiz = async () => {
     setIsLoading(true);
     setShowLoadingSubtext(false);
 
     // Delayed loading subtext
-    setTimeout(() => {
+    const subtextTimeout = setTimeout(() => {
       setShowLoadingSubtext(true);
     }, 500);
 
     // 1. Map Q1 Selections to backend Interest tags
     let interestsMap = [];
-    if (selectedQ1.includes('arch')) interestsMap.push('Mughal Architecture');
-    if (selectedQ1.includes('civ')) interestsMap.push('Indus Valley', 'Neolithic');
-    if (selectedQ1.includes('sacred')) interestsMap.push('Islamic Heritage', 'Sufi Shrines', 'Hindu Heritage');
-    if (selectedQ1.includes('art')) interestsMap.push('Gandhara Buddhist Art');
-    if (selectedQ1.includes('empires')) interestsMap.push('Mughal Architecture');
-    if (selectedQ1.includes('nature')) interestsMap.push('Central Asian/Tibetan');
-
-    // 2. Map Q2 Selections to backend Province names
-    let provincesMap = [];
-    if (selectedQ2.includes('All of Pakistan') || selectedQ2.length === 0) {
-      provincesMap = ['Punjab', 'Sindh', 'KPK', 'Balochistan', 'Gilgit-Baltistan', 'AJK'];
-    } else {
-      provincesMap = selectedQ2;
+    if (selectedQ1.includes('arch')) interestsMap.push('mughal', 'fort', 'palace');
+    if (selectedQ1.includes('civ')) interestsMap.push('indus', 'bronze-age', 'neolithic', 'stone-age', 'archaeology');
+    if (selectedQ1.includes('sacred')) interestsMap.push('islamic', 'mosque', 'tomb', 'worship');
+    if (selectedQ1.includes('art')) interestsMap.push('buddhist', 'gandhara', 'monastery');
+    if (selectedQ1.includes('empires')) interestsMap.push('mughal', 'fort');
+    if (selectedQ1.includes('nature')) interestsMap.push('desert', 'garden', 'water');
+    
+    if (interestsMap.length === 0) {
+      interestsMap = ['archaeology', 'mughal', 'unesco'];
     }
 
-    // 3. Map Q3 Selections to backend Visitor Profiles
-    let visitorTypeMap = 'Solo Traveler';
-    if (selectedQ3 === 'solo') visitorTypeMap = 'Solo Traveler';
-    else if (selectedQ3 === 'couple') visitorTypeMap = 'Adventure Backpacker';
-    else if (selectedQ3 === 'family') visitorTypeMap = 'Family Group';
-    else if (selectedQ3 === 'group') visitorTypeMap = 'Historian/Researcher';
+    // 2. Map Q2 Selections to backend Province names
+    let regionMap = 'Any';
+    if (selectedQ2.length === 1 && !selectedQ2.includes('All of Pakistan')) {
+      regionMap = selectedQ2[0];
+    }
 
-    // 4. Recommendation Scorer Logic (preserved exact AI convergence rules)
-    setTimeout(() => {
+    // 3. Map Q3 Selections to backend Travel Style
+    let travelStyleMap = 'Solo Traveler';
+    if (selectedQ3 === 'solo') travelStyleMap = 'Solo Traveler';
+    else if (selectedQ3 === 'couple') travelStyleMap = 'Adventure Backpacker';
+    else if (selectedQ3 === 'family') travelStyleMap = 'Family Group';
+    else if (selectedQ3 === 'group') travelStyleMap = 'Historian/Researcher';
+
+    try {
+      // Fetch recommendations from backend
+      const data = await api.fetchRecommendations(interestsMap, regionMap, travelStyleMap);
+      
+      // Map matchPercentage for visualization consistency
+      const scored = data.map((site, index) => ({
+        ...site,
+        matchPercentage: Math.max(99 - index * 3 - Math.floor(Math.random() * 2), 65)
+      }));
+
+      setMatchedSites(scored);
+    } catch (err) {
+      console.error("Failed to fetch AI recommendations, running local fallback:", err);
+      // Fallback local scoring if backend fails
+      let provincesMap = [];
+      if (selectedQ2.includes('All of Pakistan') || selectedQ2.length === 0) {
+        provincesMap = ['Punjab', 'Sindh', 'KPK', 'Balochistan', 'Gilgit-Baltistan', 'AJK'];
+      } else {
+        provincesMap = selectedQ2;
+      }
+      
       const calculatedMatches = siteData.map((site) => {
         let matchScore = 50;
 
         if (interestsMap.length > 0) {
           const hasInterest = interestsMap.some(interest =>
-            site.civilizationEra.toLowerCase().includes(interest.toLowerCase())
+            site.civilizationEra.toLowerCase().includes(interest.toLowerCase()) ||
+            site.siteType.toLowerCase().includes(interest.toLowerCase()) ||
+            site.tags.includes(interest.toLowerCase())
           );
           if (hasInterest) matchScore += 25;
         }
 
         if (provincesMap.length > 0) {
           if (provincesMap.includes(site.province)) matchScore += 20;
-        }
-
-        if (visitorTypeMap) {
-          if (visitorTypeMap === 'Adventure Backpacker' && site.province === 'Balochistan') matchScore += 10;
-          else if (visitorTypeMap === 'Historian/Researcher' && site.unescoListed) matchScore += 10;
-          else if (visitorTypeMap === 'Family Group' && site.province === 'Punjab') matchScore += 8;
         }
 
         matchScore += Math.floor(10 + Math.random() * 5);
@@ -190,12 +208,14 @@ export default function Recommend() {
 
       const sortedMatches = calculatedMatches
         .sort((a, b) => b.matchPercentage - a.matchPercentage)
-        .slice(0, 6);
+        .slice(0, 5);
 
       setMatchedSites(sortedMatches);
+    } finally {
+      clearTimeout(subtextTimeout);
       setIsLoading(false);
       setQuizCompleted(true);
-    }, 1500); // precisely 1.5 seconds loading state
+    }
   };
 
   const handleRetakeQuiz = () => {
@@ -323,12 +343,23 @@ export default function Recommend() {
           {/* Results Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[28px] items-stretch mt-4">
             {matchedSites.map((site) => (
-              <div key={site.id} className="relative group h-full">
-                {/* Match score ribbon */}
-                <div className="absolute top-4 right-4 z-20 bg-[#1D9E75] text-[#EDE9DF] px-3 py-1 rounded-full text-[10px] font-sans tracking-wide uppercase shadow-md" style={{ fontWeight: 600 }}>
-                  {site.matchPercentage}% Match
+              <div key={site.id} className="relative group h-full flex flex-col justify-between">
+                <div className="relative">
+                  {/* Match score ribbon */}
+                  <div className="absolute top-4 right-4 z-20 bg-[#1D9E75] text-[#EDE9DF] px-3 py-1 rounded-full text-[10px] font-sans tracking-wide uppercase shadow-md" style={{ fontWeight: 600 }}>
+                    {site.matchPercentage}% Match
+                  </div>
+                  <ExploreSiteCard {...site} />
                 </div>
-                <ExploreSiteCard {...site} />
+                {site.recommendationReason && (
+                  <div className="mt-3 bg-[#EDEAE4]/75 dark:bg-[#1C1C1C] border border-[#D5CFC6]/50 dark:border-[#3D494F]/40 p-4 rounded-xl text-[11px] font-sans italic text-[#6B6560]/90 dark:text-[#C8B89A]/95 leading-relaxed relative flex items-start gap-2 shadow-sm">
+                    <span className="text-xs">✨</span>
+                    <div>
+                      <span className="font-bold not-italic uppercase tracking-wider text-[8px] text-[#1D9E75] block mb-0.5">AI Suggestion Reason</span>
+                      {site.recommendationReason}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
