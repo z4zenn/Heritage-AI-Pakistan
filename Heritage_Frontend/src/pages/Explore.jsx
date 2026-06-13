@@ -3,28 +3,53 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { Search, Filter, X, Map, Eye, MapPin, Landmark, Star } from 'lucide-react';
 import ExploreSiteCard from '../components/ExploreSiteCard';
 import { siteData } from '../data/siteData';
+import { api } from '../services/api';
 import Groq from "groq-sdk";
 
 const provinces = ['Punjab', 'Sindh', 'KPK', 'Balochistan', 'Gilgit-Baltistan', 'AJK'];
-const siteTypes = ['Archaeological', 'Religious/Shrine', 'Historical Fort'];
+const siteTypes = [
+  'Archaeological Site',
+  'Fort',
+  'Mosque',
+  'Temple',
+  'Gurudwara',
+  'Tomb',
+  'Stupa',
+  'Monastery',
+  'Museum',
+  'Rock Art',
+  'Garden'
+];
 const eras = [
-  'Mughal Architecture',
-  'Gandhara Buddhist Art',
   'Indus Valley',
-  'Islamic Heritage',
-  'Sufi Shrines',
-  'Hindu Heritage',
-  'Central Asian/Tibetan',
+  'Buddhist',
+  'Gandhara',
+  'Hindu',
+  'Sikh',
+  'Mughal',
+  'Sultanate',
+  'Medieval Islamic',
+  'British Colonial',
   'Neolithic',
-  'Kashmiri/Mughal'
+  'Ancient'
 ];
 
-const client = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+const getGroqClient = () => {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey || apiKey === 'your_groq_api_key_here') {
+    return null;
+  }
+  return new Groq({
+    apiKey,
+    dangerouslyAllowBrowser: true
+  });
+};
 
 const getSiteInfo = async (siteName) => {
+  const client = getGroqClient();
+  if (!client) {
+    throw new Error("Groq API key is missing");
+  }
   const response = await client.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     max_tokens: 200,
@@ -65,6 +90,10 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
 
 // Image recognition function using Groq Llama-4 Vision
 const identifySite = async (imageFile) => {
+  const client = getGroqClient();
+  if (!client) {
+    throw new Error("Groq API key is missing");
+  }
   const base64Image = await toBase64(imageFile);
 
   const response = await client.chat.completions.create({
@@ -131,6 +160,58 @@ export default function Explore() {
   const [selectedEra, setSelectedEra] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
 
+  const [sites, setSites] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load sites from API on mount
+  useEffect(() => {
+    const loadSites = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.fetchSites();
+        setSites(data);
+      } catch (err) {
+        console.error("Failed to fetch sites from backend:", err);
+        // Fallback to static data in case backend is offline
+        setSites(siteData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSites();
+  }, []);
+
+  // Handle Enter key for AI Search
+  const handleSearchKeyDown = async (e) => {
+    if (e.key === 'Enter') {
+      const query = searchQuery.trim();
+      if (!query) {
+        setIsLoading(true);
+        try {
+          const data = await api.fetchSites();
+          setSites(data);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const results = await api.searchSites(query);
+        setSites(results);
+      } catch (err) {
+        console.error("AI Search failed, using local filtering:", err);
+        // Reset to full list so local search can take over
+        const data = await api.fetchSites();
+        setSites(data);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   // Pagination state and automatic reset on filter updates
   const [visibleCount, setVisibleCount] = useState(6);
 
@@ -195,7 +276,7 @@ export default function Explore() {
           })
           .catch((err) => {
             console.error(err);
-            const fallbackSite = siteData.find(site =>
+            const fallbackSite = sites.find(site =>
               site.name.toLowerCase() === result.siteName.toLowerCase() ||
               site.name.toLowerCase().includes(result.siteName.toLowerCase()) ||
               result.siteName.toLowerCase().includes(site.name.toLowerCase())
@@ -253,7 +334,7 @@ export default function Explore() {
   };
 
   const matchedSite = aiIdentifiedName
-    ? siteData.find(site =>
+    ? sites.find(site =>
         site.name.toLowerCase() === aiIdentifiedName.toLowerCase() ||
         site.name.toLowerCase().includes(aiIdentifiedName.toLowerCase()) ||
         aiIdentifiedName.toLowerCase().includes(site.name.toLowerCase())
@@ -371,14 +452,49 @@ export default function Explore() {
     setTempEra('All');
   };
 
-  const filteredSites = siteData.filter((site) => {
+  const filteredSites = sites.filter((site) => {
     const matchesSearch = site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           site.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           site.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesProvince = selectedProvince === 'All' || site.province === selectedProvince;
-    const matchesType = selectedType === 'All' || site.siteType === selectedType;
+    
+    // Handle province filtering
+    const matchesProvince = selectedProvince === 'All' || 
+                            site.province.toLowerCase() === selectedProvince.toLowerCase();
+    
+    // Handle site type filtering (flexible match)
+    let matchesType = false;
+    if (selectedType === 'All') {
+      matchesType = true;
+    } else {
+      const siteTypeLower = site.siteType.toLowerCase();
+      const selTypeLower = selectedType.toLowerCase();
+      matchesType = siteTypeLower.includes(selTypeLower) || 
+                    selTypeLower.includes(siteTypeLower) ||
+                    (selTypeLower.includes('fort') && siteTypeLower.includes('fort')) ||
+                    (selTypeLower === 'archaeological' && siteTypeLower.includes('archaeological')) ||
+                    (selTypeLower === 'religious/shrine' && ['mosque', 'temple', 'gurudwara', 'monastery', 'shrine'].some(t => siteTypeLower.includes(t)));
+    }
+    
     const matchesUnesco = !unescoOnly || site.unescoListed === true;
-    const matchesEra = selectedEra === 'All' || site.civilizationEra === selectedEra;
+    
+    // Handle era filtering (flexible match)
+    let matchesEra = false;
+    if (selectedEra === 'All') {
+      matchesEra = true;
+    } else {
+      const siteEraLower = site.civilizationEra.toLowerCase();
+      const selEraLower = selectedEra.toLowerCase();
+      matchesEra = siteEraLower.includes(selEraLower) || 
+                   selEraLower.includes(siteEraLower) ||
+                   (selEraLower.includes('mughal') && siteEraLower.includes('mughal')) ||
+                   (selEraLower.includes('buddhist') && (siteEraLower.includes('buddhist') || siteEraLower.includes('gandhara'))) ||
+                   (selEraLower.includes('gandhara') && (siteEraLower.includes('gandhara') || siteEraLower.includes('buddhist'))) ||
+                   (selEraLower.includes('neolithic') && siteEraLower.includes('neolithic')) ||
+                   (selEraLower.includes('islamic') && siteEraLower.includes('islamic')) ||
+                   (selEraLower.includes('hindu') && siteEraLower.includes('hindu')) ||
+                   (selEraLower.includes('sikh') && siteEraLower.includes('sikh'));
+    }
+    
     return matchesSearch && matchesProvince && matchesType && matchesUnesco && matchesEra;
   });
 
@@ -612,7 +728,8 @@ export default function Explore() {
             id="sites-search-bar"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Discover lost civilizations, sacred shrines, and ancient forts..."
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Discover lost civilizations, sacred shrines, and ancient forts... (Press Enter for AI Search)"
             className="w-full pl-10 pr-4 py-2.5 bg-transparent border-[0.5px] border-[#D5CFC6]/65 dark:border-[#3D494F]/50 rounded-[10px] text-xs font-sans text-[#1A1E21] dark:text-[#EDE9DF] placeholder-[#6B6560]/45 dark:placeholder-[#C8B89A]/35 focus:outline-none focus:border-[#1D9E75] transition-all duration-300"
           />
           <Search className="absolute left-3.5 w-3.5 h-3.5 text-[#6B6560]/50 dark:text-[#C8B89A]/40" />
@@ -688,7 +805,18 @@ export default function Explore() {
 
       {/* Cards Grid */}
       <main className="w-full">
-        {filteredSites.length > 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[28px] items-stretch">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-[#FAF6F0] dark:bg-[#23282D]/40 border border-[#D5CFC6]/60 dark:border-[#3D494F]/30 rounded-2xl p-6 h-[400px] flex flex-col gap-4">
+                <div className="w-full h-48 bg-[#D5CFC6]/20 dark:bg-[#3D494F]/25 rounded-xl skeleton-shimmer" />
+                <div className="h-6 bg-[#D5CFC6]/20 dark:bg-[#3D494F]/25 rounded w-2/3 skeleton-shimmer" />
+                <div className="h-4 bg-[#D5CFC6]/20 dark:bg-[#3D494F]/25 rounded w-1/2 skeleton-shimmer" />
+                <div className="h-16 bg-[#D5CFC6]/20 dark:bg-[#3D494F]/25 rounded w-full skeleton-shimmer" />
+              </div>
+            ))}
+          </div>
+        ) : filteredSites.length > 0 ? (
           <div className="flex flex-col gap-10">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[28px] items-stretch">
               {filteredSites.slice(0, visibleCount).map((site) => (
